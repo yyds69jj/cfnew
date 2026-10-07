@@ -7,6 +7,6 @@ compatibility_date = "2026-01-20"
 workers_dev = true
 
 # 如果原 Worker 绑定了 KV / D1 / R2 / 自定义域名，把对应配置一并搬过来，例如：
-vars = [{ u = "d03bcdd0-a390-4eb1-9e04-60c6114455c6" }]
+vars = { u = "8941fe80-39ba-42e3-93b6-ea0cdfad321f" }
 kv_namespaces = [{ binding = "C", id = "dd2dbda06cab4af0849421a0ddd8959c" }]
 # routes = [{ pattern = "example.com/*", zone_name = "example.com" }]
