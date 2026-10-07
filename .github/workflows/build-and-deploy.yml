@@ -1,0 +1,48 @@
+# 混淆「明文源吗」并直接部署到 Cloudflare Workers。
+# 产物不再写回 git，仓库体积不会再增长。
+name: Build and Deploy Worker
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - '**'          # 仅分支推送，不含 tag
+    paths:
+      - '明文源吗'
+  schedule:
+    - cron: '0 */2 * * *'   # 每 2 小时（UTC）。原写法 '0 */4* * *' 是非法 cron，会报 Invalid workflow file
+
+permissions:
+  contents: read      # 不再 push，只要读权限
+
+concurrency:
+  group: build-and-deploy-worker
+  cancel-in-progress: true   # 定时与手动触发重叠时，后到的取消前一个
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install tooling
+        run: |
+          npm init -y >/dev/null 2>&1 || true
+          npm install --no-audit --no-fund javascript-obfuscator@4 wrangler@4
+
+      - name: Obfuscate source
+        run: node .github/scripts/obfuscate.js
+
+      - name: Deploy to Cloudflare Workers
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        # 源文件是自包含单文件（无 import/require）时，可在末尾加 --no-bundle，
+        # 让混淆产物原样上传、不被 esbuild 二次处理。
+        run: npx wrangler deploy
