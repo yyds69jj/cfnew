@@ -1,8 +1,5 @@
 name: Generate and Obfuscate Worker Script
-permissions:
-  contents: write
-  pages: write
-  id-token: write
+
 on:
   workflow_dispatch:
   schedule:
