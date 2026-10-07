@@ -10,7 +10,8 @@ on:
     paths:
       - '明文源吗'
   schedule:
-    - cron: '0 */2 * * *'   # 每 2 小时（UTC）。原写法 '0 */4* * *' 是非法 cron，会报 Invalid workflow file
+    - cron: '17 */2 * * *'
+      timezone: 'Asia/Shanghai'   # 每 2 小时（UTC）。原写法 '0 */4* * *' 是非法 cron，会报 Invalid workflow file
 
 permissions:
   contents: read      # 不再 push，只要读权限
