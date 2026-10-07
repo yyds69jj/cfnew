@@ -47,7 +47,7 @@ const obfuscationOptions = {
 
   // 原来是 1（逐字符切分），产物体积会翻好几倍。4~6 观感几乎一样，体积腰斩。
   splitStrings: true,
-  splitStringsChunkLength: 5,
+  splitStringsChunkLength: 1,
 
   transformObjectKeys: false,
   unicodeEscapeSequence: true,
