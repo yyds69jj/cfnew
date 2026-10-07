@@ -1,17 +1,21 @@
 name: Generate and Obfuscate Worker Script
-
+permissions:
+  contents: write
+  pages: write
+  id-token: write
 on:
   workflow_dispatch:
+  schedule:
+    - cron: '0 */4 * * *'
   push:
     branches:
-      - '**'  # 仅匹配分支推送，排除标签推送
+      - '**'
     paths:
-      - '明文源吗'
+      - '明文源吗' # 只有明文源吗改动才触发push构建
 
 jobs:
   build-and-obfuscate:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -21,10 +25,11 @@ jobs:
         with:
           node-version: '18'
 
-      - name: Install Obfuscator
-        run: npm install javascript-obfuscator
+      - name: Install dependencies
+        run: |
+          npm install javascript-obfuscator wrangler
 
-      - name: Obfuscate from local source file
+      - name: Obfuscate source in memory, output to temp file
         run: |
           cat > obfuscate.js << 'EOF'
           const JavaScriptObfuscator = require('javascript-obfuscator');
@@ -32,21 +37,18 @@ jobs:
           const path = require('path');
           
           const sourceFileName = '明文源吗';
-          const outputFileName = '少年你相信光吗';
+          // 输出到工作目录临时文件，不提交git
+          const outputFileName = 'worker-obfuscated.js';
           const sourceFilePath = path.join(process.cwd(), sourceFileName);
-
           if (!fs.existsSync(sourceFilePath)) {
-            console.error('错误：在路径 \'' + sourceFilePath + '\' 未找到源文件。请确保您的仓库根目录有名为 \'明文源吗\' 的文件。');
+            console.error('源文件未找到');
             process.exit(1);
           }
-
           const originalCode = fs.readFileSync(sourceFilePath, 'utf8');
-
           if (!originalCode || originalCode.trim().length === 0) {
-            console.error('错误：源文件 ' + sourceFileName + ' 为空。');
+            console.error('源文件为空');
             process.exit(1);
           }
-
           const obfuscationOptions = {
               compact: true,
               controlFlowFlattening: false,
@@ -80,22 +82,16 @@ jobs:
               disableConsoleOutput: false,
               domainLock: []
           };
-
           const obfuscatedCode = JavaScriptObfuscator.obfuscate(originalCode, obfuscationOptions).getObfuscatedCode();
-          
           fs.writeFileSync(path.join(process.cwd(), outputFileName), obfuscatedCode, 'utf8');
-          console.log('成功将 \'' + sourceFileName + '\' 混淆并保存至 \'' + outputFileName + '\'。');
+          console.log("混淆完成");
           EOF
           node obfuscate.js
 
-      - name: Commit and push the obfuscated file
-        run: |
-          git config --global user.name 'GitHub Actions Bot'
-          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-          git add '少年你相信光吗'
-          if git diff --staged --quiet; then
-            echo "No changes to commit, the obfuscated file is already up-to-date."
-          else
-            git commit -m "部署用这个"
-            git push
-          fi
+      # 使用wrangler直接部署混淆后的脚本，不需要写回仓库
+      - name: Deploy Cloudflare Worker
+        env:
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+        run: npx wrangler deploy worker-obfuscated.js --name floral-rice-0738
+
